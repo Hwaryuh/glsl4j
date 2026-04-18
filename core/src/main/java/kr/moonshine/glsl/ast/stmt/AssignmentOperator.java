@@ -11,7 +11,8 @@ public enum AssignmentOperator {
     BIT_OR_ASSIGN("|="),
     BIT_XOR_ASSIGN("^="),
     SHL_ASSIGN("<<="),
-    SHR_ASSIGN(">>=");
+    SHR_ASSIGN(">>="),
+    ;
 
     private final String symbol;
 

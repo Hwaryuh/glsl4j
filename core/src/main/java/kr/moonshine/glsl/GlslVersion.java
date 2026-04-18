@@ -2,7 +2,7 @@ package kr.moonshine.glsl;
 
 public enum GlslVersion {
     V150("150"),
-    V330("330 core"),
+    V330("330"),
     ;
 
     private final String versionString;

@@ -3,7 +3,8 @@ package kr.moonshine.glsl.ast.expr;
 public enum UnaryOperator {
     NEGATE("-"),
     NOT("!"),
-    BIT_NOT("~");
+    BIT_NOT("~"),
+    ;
 
     private final String symbol;
 

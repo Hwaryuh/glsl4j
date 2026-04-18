@@ -18,7 +18,8 @@ public enum BinaryOperator {
     BIT_OR("|"),
     BIT_XOR("^"),
     SHL("<<"),
-    SHR(">>");
+    SHR(">>"),
+    ;
 
     private final String symbol;
 
