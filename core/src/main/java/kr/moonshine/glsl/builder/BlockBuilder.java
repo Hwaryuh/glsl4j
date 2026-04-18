@@ -59,6 +59,11 @@ public final class BlockBuilder {
         return this;
     }
 
+    public BlockBuilder stmt(Statement statement) {
+        statements.add(statement);
+        return this;
+    }
+
     public BlockBuilder expr(Expression expression) {
         statements.add(new ExpressionStatement(expression));
         return this;

@@ -47,6 +47,11 @@ public final class SwitchCaseBuilder {
         return this;
     }
 
+    public SwitchCaseBuilder stmt(Statement statement) {
+        blockBuilder.stmt(statement);
+        return this;
+    }
+
     public SwitchCaseBuilder expr(Expression expression) {
         blockBuilder.expr(expression);
         return this;
