@@ -165,12 +165,21 @@ abstract class BaseGlslEmitter {
     }
 
     protected String emitExpr(Expression node) {
+        return emitExpr(node, Integer.MIN_VALUE);
+    }
+
+    private String emitExpr(Expression node, int parentPrecedence) {
         return switch (node) {
             case LiteralExpression e -> emitLiteral(e);
             case VariableExpression e -> e.name();
-            case BinaryExpression e ->
-                    "(" + emitExpr(e.left()) + sep() + e.operator().symbol() + sep() + emitExpr(e.right()) + ")";
-            case UnaryExpression e -> "(" + e.operator().symbol() + emitExpr(e.operand()) + ")";
+            case BinaryExpression e -> {
+                int prec = e.operator().precedence();
+                String inner = emitExpr(e.left(), prec - 1)
+                        + sep() + e.operator().symbol() + sep()
+                        + emitExpr(e.right(), prec);
+                yield prec <= parentPrecedence ? "(" + inner + ")" : inner;
+            }
+            case UnaryExpression e -> e.operator().symbol() + emitExpr(e.operand(), Integer.MAX_VALUE);
             case TernaryExpression e ->
                     "(" + emitExpr(e.condition()) + sep() + "?" + sep() + emitExpr(e.thenExpr()) + sep() + ":" + sep() + emitExpr(e.elseExpr()) + ")";
             case FunctionCallExpression e -> emitFunctionCall(e);
