@@ -7,5 +7,5 @@ public sealed interface Statement extends GlslNode
         DiscardStatement, IfStatement, ForStatement, WhileStatement,
         Block, BreakStatement, ContinueStatement,
         LocalVariableDeclarationStatement, MacroInvocationStatement,
-        IntegerSwitchStatement {
+        IntegerSwitchStatement, VoidFunctionCallStatement {
 }

@@ -14,6 +14,7 @@ import kr.moonshine.glsl.ast.stmt.LocalVariableDeclarationStatement;
 import kr.moonshine.glsl.ast.stmt.MacroInvocationStatement;
 import kr.moonshine.glsl.ast.stmt.ReturnStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
+import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
 import kr.moonshine.glsl.type.GlslType;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,6 +79,11 @@ public final class BlockBuilder {
         return this;
     }
 
+    public BlockBuilder voidCall(String name, Expression... arguments) {
+        statements.add(new VoidFunctionCallStatement(name, Lists.newArrayList(arguments)));
+        return this;
+    }
+
     public BlockBuilder breakStmt() {
         statements.add(new BreakStatement());
         return this;
@@ -85,6 +91,11 @@ public final class BlockBuilder {
 
     public BlockBuilder ret(@Nullable Expression value) {
         statements.add(new ReturnStatement(value));
+        return this;
+    }
+
+    public BlockBuilder ret() {
+        statements.add(new ReturnStatement(null));
         return this;
     }
 

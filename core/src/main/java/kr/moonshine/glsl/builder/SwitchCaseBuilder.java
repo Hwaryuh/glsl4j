@@ -67,6 +67,11 @@ public final class SwitchCaseBuilder {
         return this;
     }
 
+    public SwitchCaseBuilder voidCall(String name, Expression... arguments) {
+        blockBuilder.voidCall(name, arguments);
+        return this;
+    }
+
     public SwitchCaseBuilder noBreak() {
         this.autoBreak = false;
         return this;
