@@ -109,7 +109,7 @@ public final class GlslEmitter {
 
     private String emitStructDecl(StructDeclaration d) {
         var sb = new StringBuilder();
-        sb.append("struct ").append(d.name()).append(sep()).append("{").append("\n");
+        sb.append("struct ").append(d.name()).append(sep()).append("{").append(nl());
         for (var field : d.fields()) {
             sb.append(indent(field.glslType().glslName() + ' ' + field.name() + ';')).append(nl());
         }
@@ -196,12 +196,12 @@ public final class GlslEmitter {
 
     private String emitIntegerSwitch(IntegerSwitchStatement s) {
         var sb = new StringBuilder();
-        sb.append("switch (").append(emitExpr(s.selector())).append(") {\n");
+        sb.append("switch (").append(emitExpr(s.selector())).append(") {").append(nl());
         for (var c : s.cases()) {
-            sb.append(indent("case " + c.id() + ": " + emitBlock(c.body()))).append('\n');
+            sb.append(indent("case " + c.id() + ": " + emitBlock(c.body()))).append(nl());
         }
         if (s.defaultCase() != null) {
-            sb.append(indent("default: " + emitBlock(s.defaultCase()))).append('\n');
+            sb.append(indent("default: " + emitBlock(s.defaultCase()))).append(nl());
         }
         sb.append("}");
         return sb.toString();
