@@ -144,18 +144,25 @@ public final class Expressions {
     }
 
     public static FunctionCallExpression vec2(Expression scalar) {
+        requireNumericScalar("vec2", scalar);
         return new FunctionCallExpression("vec2", Lists.newArrayList(scalar), Vec2Type.INSTANCE);
     }
 
     public static FunctionCallExpression vec2(Expression x, Expression y) {
+        requireNumericScalar("vec2", x);
+        requireNumericScalar("vec2", y);
         return new FunctionCallExpression("vec2", Lists.newArrayList(x, y), Vec2Type.INSTANCE);
     }
 
     public static FunctionCallExpression vec3(Expression scalar) {
+        requireNumericScalar("vec3", scalar);
         return new FunctionCallExpression("vec3", Lists.newArrayList(scalar), Vec3Type.INSTANCE);
     }
 
     public static FunctionCallExpression vec3(Expression x, Expression y, Expression z) {
+        requireNumericScalar("vec3", x);
+        requireNumericScalar("vec3", y);
+        requireNumericScalar("vec3", z);
         return new FunctionCallExpression("vec3", Lists.newArrayList(x, y, z), Vec3Type.INSTANCE);
     }
 
@@ -163,13 +170,15 @@ public final class Expressions {
         if (xy.glslType() != Vec2Type.INSTANCE) {
             throw new GlslTypeException("vec3(xy, z): xy must be vec2");
         }
-        if (z.glslType() != ScalarType.FLOAT) {
-            throw new GlslTypeException("vec3(xy, z): z must be float");
-        }
+        requireNumericScalar("vec3", z);
         return new FunctionCallExpression("vec3", Lists.newArrayList(xy, z), Vec3Type.INSTANCE);
     }
 
     public static FunctionCallExpression vec4(Expression x, Expression y, Expression z, Expression w) {
+        requireNumericScalar("vec4", x);
+        requireNumericScalar("vec4", y);
+        requireNumericScalar("vec4", z);
+        requireNumericScalar("vec4", w);
         return new FunctionCallExpression("vec4", Lists.newArrayList(x, y, z, w), Vec4Type.INSTANCE);
     }
 
@@ -177,14 +186,20 @@ public final class Expressions {
         if (xyz.glslType() != Vec3Type.INSTANCE) {
             throw new GlslTypeException("vec4(xyz, w): xyz must be vec3");
         }
-        if (w.glslType() != ScalarType.FLOAT) {
-            throw new GlslTypeException("vec4(xyz, w): w must be float");
-        }
+        requireNumericScalar("vec4", w);
         return new FunctionCallExpression("vec4", Lists.newArrayList(xyz, w), Vec4Type.INSTANCE);
     }
 
     public static FunctionCallExpression vec4(Expression scalar) {
+        requireNumericScalar("vec4", scalar);
         return new FunctionCallExpression("vec4", Lists.newArrayList(scalar), Vec4Type.INSTANCE);
+    }
+
+    private static void requireNumericScalar(String fn, Expression expr) {
+        GlslType type = expr.glslType();
+        if (type != ScalarType.FLOAT && type != ScalarType.INT) {
+            throw new GlslTypeException(fn + "(): argument must be float or int, got " + type.glslName());
+        }
     }
 
     private static BinaryExpression binary(BinaryOperator operator, Expression left, Expression right) {

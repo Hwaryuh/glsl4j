@@ -32,6 +32,7 @@ import kr.moonshine.glsl.ast.stmt.MacroInvocationStatement;
 import kr.moonshine.glsl.ast.stmt.ReturnStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
 import kr.moonshine.glsl.ast.stmt.SwitchCase;
+import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
 import kr.moonshine.glsl.ast.stmt.WhileStatement;
 
 public abstract class AstRewriter {
@@ -109,6 +110,10 @@ public abstract class AstRewriter {
                 var cases = s.cases().stream().map(this::rewriteSwitchCase).toList();
                 var defaultCase = s.defaultCase() == null ? null : rewriteBlock(s.defaultCase());
                 yield new IntegerSwitchStatement(rewriteExpr(s.selector()), cases, defaultCase);
+            }
+            case VoidFunctionCallStatement s -> {
+                var args = s.arguments().stream().map(this::rewriteExpr).toList();
+                yield new VoidFunctionCallStatement(s.name(), args);
             }
             case Block s -> rewriteBlock(s);
             case BreakStatement s -> s;

@@ -33,9 +33,10 @@ public final class LiteralObfuscationPass extends AstRewriter implements Obfusca
 
     private Expression splitInt(int value) {
         if (value == 0 || value == Integer.MIN_VALUE) return new IntLiteral(value);
+        int range = Math.abs(value);
+        if (range < 2) return new IntLiteral(value);
         BinaryOperator op = pickAdditiveOperator();
-        int bound = Math.abs(value);
-        int a = ThreadLocalRandom.current().nextInt(bound);
+        int a = ThreadLocalRandom.current().nextInt(1, range);
         int b = op == BinaryOperator.ADD ? value - a : value + a;
         return new BinaryExpression(new IntLiteral(a), op, new IntLiteral(b), ScalarType.INT);
     }

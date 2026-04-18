@@ -16,6 +16,7 @@ import kr.moonshine.glsl.ast.stmt.IfStatement;
 import kr.moonshine.glsl.ast.stmt.IntegerSwitchStatement;
 import kr.moonshine.glsl.ast.stmt.LocalVariableDeclarationStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
+import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
 import kr.moonshine.glsl.ast.stmt.WhileStatement;
 import kr.moonshine.glsl.emit.ObfuscationFeature;
 import kr.moonshine.glsl.emit.ObfuscationPass;
@@ -134,14 +135,19 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
 
     @Override
     protected Statement rewriteStatement(Statement node) {
-        if (node instanceof LocalVariableDeclarationStatement(
-                GlslType glslType, String name,
-                Expression initializer
-        )) {
-            var init = initializer == null ? null : rewriteExpr(initializer);
-            return new LocalVariableDeclarationStatement(glslType, mapped(name), init);
-        }
-        return super.rewriteStatement(node);
+        return switch (node) {
+            case LocalVariableDeclarationStatement(
+                    GlslType glslType, String name, Expression initializer
+            ) -> {
+                var init = initializer == null ? null : rewriteExpr(initializer);
+                yield new LocalVariableDeclarationStatement(glslType, mapped(name), init);
+            }
+            case VoidFunctionCallStatement s -> {
+                var args = s.arguments().stream().map(this::rewriteExpr).toList();
+                yield new VoidFunctionCallStatement(mapped(s.name()), args);
+            }
+            default -> super.rewriteStatement(node);
+        };
     }
 
     @Override

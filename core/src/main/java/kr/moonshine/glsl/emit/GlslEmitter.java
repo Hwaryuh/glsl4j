@@ -34,8 +34,10 @@ import kr.moonshine.glsl.ast.stmt.LocalVariableDeclarationStatement;
 import kr.moonshine.glsl.ast.stmt.MacroInvocationStatement;
 import kr.moonshine.glsl.ast.stmt.ReturnStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
+import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
 import kr.moonshine.glsl.ast.stmt.WhileStatement;
 import kr.moonshine.glsl.dialect.GlslDialect;
+import kr.moonshine.glsl.type.FunctionReturnType;
 
 import java.util.stream.Collectors;
 
@@ -92,13 +94,17 @@ public final class GlslEmitter {
 
     private String emitFunctionDecl(FunctionDeclaration d) {
         var sb = new StringBuilder();
-        sb.append(d.returnType().glslName()).append(' ').append(d.name()).append('(');
+        sb.append(emitReturnType(d.returnType())).append(' ').append(d.name()).append('(');
         var params = d.parameters().stream()
                 .map(p -> p.glslType().glslName() + ' ' + p.name())
                 .collect(Collectors.joining(", "));
         sb.append(params).append(") ");
         sb.append(emitBlock(d.body()));
         return sb.toString();
+    }
+
+    private String emitReturnType(FunctionReturnType returnType) {
+        return returnType.glslName();
     }
 
     private String emitStructDecl(StructDeclaration d) {
@@ -126,6 +132,7 @@ public final class GlslEmitter {
             case MacroInvocationStatement s -> emitMacroCall(s);
             case IntegerSwitchStatement s -> emitIntegerSwitch(s);
             case LocalVariableDeclarationStatement s -> emitLocalVarDecl(s);
+            case VoidFunctionCallStatement s -> emitVoidFunctionCall(s);
         };
     }
 
@@ -176,6 +183,14 @@ public final class GlslEmitter {
         var args = s.arguments().stream()
                 .map(this::emitExpr)
                 .collect(Collectors.joining(", "));
+        return s.name() + "(" + args + ");";
+    }
+
+    private String emitVoidFunctionCall(VoidFunctionCallStatement s) {
+        if (s.arguments().isEmpty()) return s.name() + "();";
+        var args = s.arguments().stream()
+                .map(this::emitExpr)
+                .collect(Collectors.joining("," + sep()));
         return s.name() + "(" + args + ");";
     }
 
