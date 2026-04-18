@@ -5,6 +5,7 @@ import kr.moonshine.glsl.type.GlslType;
 import org.jetbrains.annotations.Nullable;
 
 public record LocalVariableDeclarationStatement(
+        boolean isConst,
         GlslType glslType,
         String name,
         @Nullable Expression initializer

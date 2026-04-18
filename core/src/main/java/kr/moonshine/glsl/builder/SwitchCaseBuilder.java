@@ -42,6 +42,11 @@ public final class SwitchCaseBuilder {
         return this;
     }
 
+    public SwitchCaseBuilder constLocal(GlslType type, String name, Expression initializer) {
+        blockBuilder.constLocal(type, name, initializer);
+        return this;
+    }
+
     public SwitchCaseBuilder expr(Expression expression) {
         blockBuilder.expr(expression);
         return this;
@@ -54,6 +59,11 @@ public final class SwitchCaseBuilder {
 
     public SwitchCaseBuilder ifStmt(Expression condition, Block thenBlock, Block elseBlock) {
         blockBuilder.ifStmt(condition, thenBlock, elseBlock);
+        return this;
+    }
+
+    public SwitchCaseBuilder ifStmt(Expression condition, Block thenBlock, Statement elseStatement) {
+        blockBuilder.ifStmt(condition, thenBlock, elseStatement);
         return this;
     }
 

@@ -45,12 +45,17 @@ public final class BlockBuilder {
     }
 
     public BlockBuilder local(GlslType type, String name, Expression initializer) {
-        statements.add(new LocalVariableDeclarationStatement(type, name, initializer));
+        statements.add(new LocalVariableDeclarationStatement(false, type, name, initializer));
         return this;
     }
 
     public BlockBuilder local(GlslType type, String name) {
-        statements.add(new LocalVariableDeclarationStatement(type, name, null));
+        statements.add(new LocalVariableDeclarationStatement(false, type, name, null));
+        return this;
+    }
+
+    public BlockBuilder constLocal(GlslType type, String name, Expression initializer) {
+        statements.add(new LocalVariableDeclarationStatement(true, type, name, initializer));
         return this;
     }
 
@@ -66,6 +71,11 @@ public final class BlockBuilder {
 
     public BlockBuilder ifStmt(Expression condition, Block thenBlock, Block elseBlock) {
         statements.add(new IfStatement(condition, thenBlock, elseBlock));
+        return this;
+    }
+
+    public BlockBuilder ifStmt(Expression condition, Block thenBlock, Statement elseStatement) {
+        statements.add(new IfStatement(condition, thenBlock, elseStatement));
         return this;
     }
 

@@ -6,6 +6,6 @@ import org.jetbrains.annotations.Nullable;
 public record IfStatement(
         Expression condition,
         Block thenBlock,
-        @Nullable Block elseBlock
+        @Nullable Statement elseBlock
 ) implements Statement {
 }

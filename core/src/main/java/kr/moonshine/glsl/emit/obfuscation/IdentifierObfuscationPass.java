@@ -80,7 +80,7 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
             case LocalVariableDeclarationStatement s -> allocate(s.name());
             case IfStatement s -> {
                 collectBlock(s.thenBlock());
-                if (s.elseBlock() != null) collectBlock(s.elseBlock());
+                if (s.elseBlock() != null) collectStatement(s.elseBlock());
             }
             case ForStatement s -> {
                 if (s.init() != null) collectStatement(s.init());
@@ -137,10 +137,10 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
     protected Statement rewriteStatement(Statement node) {
         return switch (node) {
             case LocalVariableDeclarationStatement(
-                    GlslType glslType, String name, Expression initializer
+                    boolean isConst, GlslType glslType, String name, Expression initializer
             ) -> {
                 var init = initializer == null ? null : rewriteExpr(initializer);
-                yield new LocalVariableDeclarationStatement(glslType, mapped(name), init);
+                yield new LocalVariableDeclarationStatement(isConst, glslType, mapped(name), init);
             }
             case VoidFunctionCallStatement s -> {
                 var args = s.arguments().stream().map(this::rewriteExpr).toList();

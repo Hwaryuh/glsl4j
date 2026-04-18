@@ -10,11 +10,14 @@ import kr.moonshine.glsl.ast.decl.FunctionDeclaration;
 import kr.moonshine.glsl.ast.decl.StorageQualifier;
 import kr.moonshine.glsl.ast.decl.StructDeclaration;
 import kr.moonshine.glsl.ast.decl.VariableDeclaration;
+import kr.moonshine.glsl.ast.expr.ArrayConstructorExpression;
+import kr.moonshine.glsl.ast.expr.ArrayIndexExpression;
 import kr.moonshine.glsl.ast.expr.Builtin;
 import kr.moonshine.glsl.ast.expr.BinaryExpression;
 import kr.moonshine.glsl.ast.expr.Expression;
 import kr.moonshine.glsl.ast.expr.FunctionCallExpression;
 import kr.moonshine.glsl.ast.expr.LiteralExpression;
+import kr.moonshine.glsl.ast.expr.MacroCallExpression;
 import kr.moonshine.glsl.ast.expr.SwizzleExpression;
 import kr.moonshine.glsl.ast.expr.TernaryExpression;
 import kr.moonshine.glsl.ast.expr.UnaryExpression;
@@ -32,6 +35,7 @@ import kr.moonshine.glsl.ast.stmt.LocalVariableDeclarationStatement;
 import kr.moonshine.glsl.ast.stmt.MacroInvocationStatement;
 import kr.moonshine.glsl.ast.stmt.ReturnStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
+import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
 import kr.moonshine.glsl.ast.stmt.WhileStatement;
 import kr.moonshine.glsl.type.ScalarType;
 
@@ -105,7 +109,7 @@ public final class GlslValidator {
             }
             case LocalVariableDeclarationStatement s -> {
                 if (s.initializer() != null) validateExpr(s.initializer(), scope);
-                scope.declare(s.name(), false);
+                scope.declare(s.name(), s.isConst());
             }
             case ExpressionStatement s -> validateExpr(s.expression(), scope);
             case ReturnStatement s -> {
@@ -119,7 +123,7 @@ public final class GlslValidator {
             case IfStatement s -> {
                 validateExpr(s.condition(), scope);
                 validateBlock(s.thenBlock(), scope);
-                if (s.elseBlock() != null) validateBlock(s.elseBlock(), scope);
+                if (s.elseBlock() != null) validateStatement(s.elseBlock(), scope);
             }
             case ForStatement s -> {
                 var forScope = new Scope(scope);
@@ -147,6 +151,8 @@ public final class GlslValidator {
             }
             case MacroInvocationStatement ignored -> {
             }
+            case VoidFunctionCallStatement ignored -> {
+            }
         }
     }
 
@@ -170,6 +176,12 @@ public final class GlslValidator {
             }
             case FunctionCallExpression e -> e.arguments().forEach(arg -> validateExpr(arg, scope));
             case SwizzleExpression e -> validateExpr(e.target(), scope);
+            case ArrayConstructorExpression e -> e.elements().forEach(elem -> validateExpr(elem, scope));
+            case ArrayIndexExpression e -> {
+                validateExpr(e.target(), scope);
+                validateExpr(e.index(), scope);
+            }
+            case MacroCallExpression e -> e.arguments().forEach(arg -> validateExpr(arg, scope));
             case LiteralExpression ignored -> {
             }
         }

@@ -9,11 +9,14 @@ import kr.moonshine.glsl.ast.decl.FunctionDeclaration;
 import kr.moonshine.glsl.ast.decl.FunctionParameter;
 import kr.moonshine.glsl.ast.decl.StructDeclaration;
 import kr.moonshine.glsl.ast.decl.VariableDeclaration;
+import kr.moonshine.glsl.ast.expr.ArrayConstructorExpression;
+import kr.moonshine.glsl.ast.expr.ArrayIndexExpression;
 import kr.moonshine.glsl.ast.expr.BinaryExpression;
 import kr.moonshine.glsl.ast.expr.Builtin;
 import kr.moonshine.glsl.ast.expr.Expression;
 import kr.moonshine.glsl.ast.expr.FunctionCallExpression;
 import kr.moonshine.glsl.ast.expr.LiteralExpression;
+import kr.moonshine.glsl.ast.expr.MacroCallExpression;
 import kr.moonshine.glsl.ast.expr.SwizzleExpression;
 import kr.moonshine.glsl.ast.expr.TernaryExpression;
 import kr.moonshine.glsl.ast.expr.UnaryExpression;
@@ -88,7 +91,7 @@ public abstract class AstRewriter {
                     new AssignmentStatement(rewriteExpr(s.target()), s.operator(), rewriteExpr(s.value()));
             case LocalVariableDeclarationStatement s -> {
                 var init = s.initializer() == null ? null : rewriteExpr(s.initializer());
-                yield new LocalVariableDeclarationStatement(s.glslType(), s.name(), init);
+                yield new LocalVariableDeclarationStatement(s.isConst(), s.glslType(), s.name(), init);
             }
             case ExpressionStatement s -> new ExpressionStatement(rewriteExpr(s.expression()));
             case ReturnStatement s -> {
@@ -96,7 +99,7 @@ public abstract class AstRewriter {
                 yield new ReturnStatement(value);
             }
             case IfStatement s -> {
-                var elseBlock = s.elseBlock() == null ? null : rewriteBlock(s.elseBlock());
+                var elseBlock = s.elseBlock() == null ? null : rewriteStatement(s.elseBlock());
                 yield new IfStatement(rewriteExpr(s.condition()), rewriteBlock(s.thenBlock()), elseBlock);
             }
             case ForStatement s -> {
@@ -145,6 +148,16 @@ public abstract class AstRewriter {
             }
             case SwizzleExpression e -> new SwizzleExpression(rewriteExpr(e.target()), e.components(), e.glslType());
             case Builtin e -> e;
+            case ArrayConstructorExpression e -> {
+                var elems = e.elements().stream().map(this::rewriteExpr).toList();
+                yield new ArrayConstructorExpression(e.glslType(), elems);
+            }
+            case ArrayIndexExpression e ->
+                    new ArrayIndexExpression(rewriteExpr(e.target()), rewriteExpr(e.index()), e.glslType());
+            case MacroCallExpression e -> {
+                var args = e.arguments().stream().map(this::rewriteExpr).toList();
+                yield new MacroCallExpression(e.name(), args, e.glslType());
+            }
         };
     }
 

@@ -6,7 +6,8 @@ import kr.moonshine.glsl.type.GlslType;
 public sealed interface Expression extends GlslNode
         permits LiteralExpression, VariableExpression, BinaryExpression,
         FunctionCallExpression, SwizzleExpression, UnaryExpression,
-        TernaryExpression, Builtin {
+        TernaryExpression, Builtin,
+        ArrayConstructorExpression, ArrayIndexExpression, MacroCallExpression {
 
     GlslType glslType();
 }

@@ -9,6 +9,8 @@ import kr.moonshine.glsl.ast.decl.FunctionDeclaration;
 import kr.moonshine.glsl.ast.decl.StorageQualifier;
 import kr.moonshine.glsl.ast.decl.StructDeclaration;
 import kr.moonshine.glsl.ast.decl.VariableDeclaration;
+import kr.moonshine.glsl.ast.expr.ArrayConstructorExpression;
+import kr.moonshine.glsl.ast.expr.ArrayIndexExpression;
 import kr.moonshine.glsl.ast.expr.BinaryExpression;
 import kr.moonshine.glsl.ast.expr.BoolLiteral;
 import kr.moonshine.glsl.ast.expr.Builtin;
@@ -17,6 +19,7 @@ import kr.moonshine.glsl.ast.expr.FloatLiteral;
 import kr.moonshine.glsl.ast.expr.FunctionCallExpression;
 import kr.moonshine.glsl.ast.expr.IntLiteral;
 import kr.moonshine.glsl.ast.expr.LiteralExpression;
+import kr.moonshine.glsl.ast.expr.MacroCallExpression;
 import kr.moonshine.glsl.ast.expr.SwizzleExpression;
 import kr.moonshine.glsl.ast.expr.TernaryExpression;
 import kr.moonshine.glsl.ast.expr.UnaryExpression;
@@ -119,7 +122,8 @@ public final class GlslEmitter {
 
     private String emitStatement(Statement node) {
         return switch (node) {
-            case AssignmentStatement s -> emitExpr(s.target()) + sep() + s.operator().symbol() + sep() + emitExpr(s.value()) + ";";
+            case AssignmentStatement s ->
+                    emitExpr(s.target()) + sep() + s.operator().symbol() + sep() + emitExpr(s.value()) + ";";
             case ExpressionStatement s -> emitExpr(s.expression()) + ";";
             case ReturnStatement s -> s.value() == null ? "return;" : "return " + emitExpr(s.value()) + ";";
             case DiscardStatement s -> "discard;";
@@ -141,7 +145,13 @@ public final class GlslEmitter {
         sb.append("if (").append(emitExpr(s.condition())).append(") ");
         sb.append(emitBlock(s.thenBlock()));
         if (s.elseBlock() != null) {
-            sb.append(sep()).append("else ").append(emitBlock(s.elseBlock()));
+            sb.append(sep()).append("else ");
+            // else if 체인: elseBlock이 IfStatement면 중괄호 없이 바로 이어붙인다
+            if (s.elseBlock() instanceof IfStatement elseIf) {
+                sb.append(emitIf(elseIf));
+            } else {
+                sb.append(emitStatement(s.elseBlock()));
+            }
         }
         return sb.toString();
     }
@@ -161,7 +171,8 @@ public final class GlslEmitter {
                 if (d.initializer() != null) sb.append(" = ").append(emitExpr(d.initializer()));
                 yield sb.toString();
             }
-            case AssignmentStatement d -> emitExpr(d.target()) + sep() + d.operator().symbol() + sep() + emitExpr(d.value());
+            case AssignmentStatement d ->
+                    emitExpr(d.target()) + sep() + d.operator().symbol() + sep() + emitExpr(d.value());
             default -> emitStatement(s);
         };
     }
@@ -209,6 +220,7 @@ public final class GlslEmitter {
 
     private String emitLocalVarDecl(LocalVariableDeclarationStatement s) {
         var sb = new StringBuilder();
+        if (s.isConst()) sb.append("const ");
         sb.append(s.glslType().glslName()).append(' ').append(s.name());
         if (s.initializer() != null) {
             sb.append(" = ").append(emitExpr(s.initializer()));
@@ -229,7 +241,25 @@ public final class GlslEmitter {
             case FunctionCallExpression e -> emitFunctionCall(e);
             case SwizzleExpression e -> emitExpr(e.target()) + "." + e.components();
             case Builtin e -> e.name();
+            case ArrayConstructorExpression e -> emitArrayConstructor(e);
+            case ArrayIndexExpression e -> emitExpr(e.target()) + "[" + emitExpr(e.index()) + "]";
+            case MacroCallExpression e -> emitMacroCallExpr(e);
         };
+    }
+
+    private String emitArrayConstructor(ArrayConstructorExpression e) {
+        var args = e.elements().stream()
+                .map(this::emitExpr)
+                .collect(Collectors.joining("," + sep()));
+        return e.glslType().glslName() + "(" + args + ")";
+    }
+
+    private String emitMacroCallExpr(MacroCallExpression e) {
+        if (e.arguments().isEmpty()) return e.name() + "()";
+        var args = e.arguments().stream()
+                .map(this::emitExpr)
+                .collect(Collectors.joining("," + sep()));
+        return e.name() + "(" + args + ")";
     }
 
     private String emitFunctionCall(FunctionCallExpression e) {
