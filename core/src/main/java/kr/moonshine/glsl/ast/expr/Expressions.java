@@ -1,16 +1,28 @@
 package kr.moonshine.glsl.ast.expr;
 
 import com.google.common.collect.Lists;
+import kr.moonshine.glsl.type.BVec2Type;
+import kr.moonshine.glsl.type.BVec3Type;
+import kr.moonshine.glsl.type.BVec4Type;
 import kr.moonshine.glsl.type.GlslType;
+import kr.moonshine.glsl.type.IVec2Type;
+import kr.moonshine.glsl.type.IVec3Type;
+import kr.moonshine.glsl.type.IVec4Type;
 import kr.moonshine.glsl.type.ScalarType;
 import kr.moonshine.glsl.type.Vec2Type;
 import kr.moonshine.glsl.type.Vec3Type;
 import kr.moonshine.glsl.type.Vec4Type;
+import kr.moonshine.glsl.type.VectorType;
 import kr.moonshine.glsl.validate.GlslTypeException;
 import kr.moonshine.glsl.validate.TypeResolver;
 
 @SuppressWarnings("unused")
 public final class Expressions {
+
+    private static final String SWIZZLE_XYZW = "xyzw";
+    private static final String SWIZZLE_RGBA = "rgba";
+    private static final String SWIZZLE_STPQ = "stpq";
+    private static final String SWIZZLE_ALL = SWIZZLE_XYZW + SWIZZLE_RGBA + SWIZZLE_STPQ;
 
     private Expressions() {
     }
@@ -109,6 +121,11 @@ public final class Expressions {
         return new UnaryExpression(UnaryOperator.BIT_NOT, operand, ScalarType.INT);
     }
 
+    public static SwizzleExpression swizzle(Expression target, String components) {
+        GlslType resultType = resolveSwizzleType(target.glslType(), components);
+        return new SwizzleExpression(target, components, resultType);
+    }
+
     public static SwizzleExpression swizzle(Expression target, String components, GlslType resultType) {
         return new SwizzleExpression(target, components, resultType);
     }
@@ -193,6 +210,70 @@ public final class Expressions {
     public static FunctionCallExpression vec4(Expression scalar) {
         requireNumericScalar("vec4", scalar);
         return new FunctionCallExpression("vec4", Lists.newArrayList(scalar), Vec4Type.INSTANCE);
+    }
+
+    private static GlslType resolveSwizzleType(GlslType targetType, String components) {
+        validateSwizzleTarget(targetType);
+        validateSwizzleComponents(components);
+        ScalarType elem = ((VectorType) targetType).elementType();
+        return switch (components.length()) {
+            case 1 -> elem;
+            case 2 -> resolveVec2(elem);
+            case 3 -> resolveVec3(elem);
+            case 4 -> resolveVec4(elem);
+            default -> throw new GlslTypeException(
+                    "Swizzle component length must be 1-4, got: " + components.length());
+        };
+    }
+
+    private static void validateSwizzleTarget(GlslType type) {
+        if (!(type instanceof VectorType)) {
+            throw new GlslTypeException(
+                    "Swizzle requires vector type, got: " + type.glslName());
+        }
+    }
+
+    private static void validateSwizzleComponents(String components) {
+        if (components.isEmpty() || components.length() > 4) {
+            throw new GlslTypeException("Swizzle component length must be 1-4");
+        }
+        boolean hasXyzw = components.chars().anyMatch(c -> SWIZZLE_XYZW.indexOf(c) >= 0);
+        boolean hasRgba = components.chars().anyMatch(c -> SWIZZLE_RGBA.indexOf(c) >= 0);
+        boolean hasStpq = components.chars().anyMatch(c -> SWIZZLE_STPQ.indexOf(c) >= 0);
+        int setCount = (hasXyzw ? 1 : 0) + (hasRgba ? 1 : 0) + (hasStpq ? 1 : 0);
+        if (setCount > 1) {
+            throw new GlslTypeException(
+                    "Swizzle components must belong to the same set (xyzw / rgba / stpq): " + components);
+        }
+        for (char c : components.toCharArray()) {
+            if (SWIZZLE_ALL.indexOf(c) < 0) {
+                throw new GlslTypeException("Invalid swizzle component: '" + c + "'");
+            }
+        }
+    }
+
+    private static GlslType resolveVec2(ScalarType elem) {
+        return switch (elem) {
+            case FLOAT -> Vec2Type.INSTANCE;
+            case INT -> IVec2Type.INSTANCE;
+            case BOOL -> BVec2Type.INSTANCE;
+        };
+    }
+
+    private static GlslType resolveVec3(ScalarType elem) {
+        return switch (elem) {
+            case FLOAT -> Vec3Type.INSTANCE;
+            case INT -> IVec3Type.INSTANCE;
+            case BOOL -> BVec3Type.INSTANCE;
+        };
+    }
+
+    private static GlslType resolveVec4(ScalarType elem) {
+        return switch (elem) {
+            case FLOAT -> Vec4Type.INSTANCE;
+            case INT -> IVec4Type.INSTANCE;
+            case BOOL -> BVec4Type.INSTANCE;
+        };
     }
 
     private static void requireNumericScalar(String fn, Expression expr) {

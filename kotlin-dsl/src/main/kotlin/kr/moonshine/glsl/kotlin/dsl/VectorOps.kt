@@ -7,9 +7,6 @@ import kr.moonshine.glsl.ast.expr.FunctionCallExpression
 import kr.moonshine.glsl.ast.expr.SwizzleExpression
 import kr.moonshine.glsl.ast.expr.UnaryExpression
 import kr.moonshine.glsl.type.ScalarType
-import kr.moonshine.glsl.type.Vec2Type
-import kr.moonshine.glsl.type.Vec3Type
-import kr.moonshine.glsl.type.Vec4Type
 
 operator fun Expression.plus(other: Expression): BinaryExpression = Expressions.add(this, other)
 
@@ -25,13 +22,13 @@ operator fun Expression.unaryMinus(): UnaryExpression = Expressions.negate(this)
 
 operator fun Expression.not(): UnaryExpression = Expressions.not(this)
 
-val Expression.xy get(): SwizzleExpression = Expressions.swizzle(this, "xy", Vec2Type.INSTANCE)
-val Expression.xyz get(): SwizzleExpression = Expressions.swizzle(this, "xyz", Vec3Type.INSTANCE)
-val Expression.xyzw get(): SwizzleExpression = Expressions.swizzle(this, "xyzw", Vec4Type.INSTANCE)
-val Expression.x get(): SwizzleExpression = Expressions.swizzle(this, "x", ScalarType.FLOAT)
-val Expression.y get(): SwizzleExpression = Expressions.swizzle(this, "y", ScalarType.FLOAT)
-val Expression.z get(): SwizzleExpression = Expressions.swizzle(this, "z", ScalarType.FLOAT)
-val Expression.w get(): SwizzleExpression = Expressions.swizzle(this, "w", ScalarType.FLOAT)
+val Expression.x get(): SwizzleExpression = Expressions.swizzle(this, "x")
+val Expression.y get(): SwizzleExpression = Expressions.swizzle(this, "y")
+val Expression.z get(): SwizzleExpression = Expressions.swizzle(this, "z")
+val Expression.w get(): SwizzleExpression = Expressions.swizzle(this, "w")
+val Expression.xy get(): SwizzleExpression = Expressions.swizzle(this, "xy")
+val Expression.xyz get(): SwizzleExpression = Expressions.swizzle(this, "xyz")
+val Expression.xyzw get(): SwizzleExpression = Expressions.swizzle(this, "xyzw")
 
 fun Expression.dot(other: Expression): FunctionCallExpression = Expressions.call("dot", ScalarType.FLOAT, this, other)
 
