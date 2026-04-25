@@ -11,17 +11,15 @@ import kr.moonshine.glsl.ast.decl.VariableDeclaration;
 import kr.moonshine.glsl.ast.expr.Expression;
 import kr.moonshine.glsl.ast.expr.VariableExpression;
 import kr.moonshine.glsl.ast.stmt.Block;
-import kr.moonshine.glsl.ast.stmt.ForStatement;
-import kr.moonshine.glsl.ast.stmt.IfStatement;
-import kr.moonshine.glsl.ast.stmt.IntegerSwitchStatement;
 import kr.moonshine.glsl.ast.stmt.LocalVariableDeclarationStatement;
 import kr.moonshine.glsl.ast.stmt.Statement;
 import kr.moonshine.glsl.ast.stmt.VoidFunctionCallStatement;
-import kr.moonshine.glsl.ast.stmt.WhileStatement;
 import kr.moonshine.glsl.emit.ObfuscationFeature;
 import kr.moonshine.glsl.emit.ObfuscationPass;
 import kr.moonshine.glsl.type.GlslType;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,7 +30,7 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
             "gl_PointSize", "gl_VertexID", "gl_InstanceID");
 
     private final Set<String> externalScope;
-    private final Map<String, String> mapping = Maps.newHashMap();
+    private final Deque<Map<String, String>> scopeStack = new ArrayDeque<>();
     private int counter = 0;
 
     public IdentifierObfuscationPass() {
@@ -46,91 +44,52 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
     @Override
     public ShaderUnit apply(ShaderUnit unit, Set<ObfuscationFeature> features) {
         if (!features.contains(ObfuscationFeature.IDENTIFIER)) return unit;
-        collectDeclarations(unit);
-        return rewriteUnit(unit);
-    }
-
-    private void collectDeclarations(ShaderUnit unit) {
+        pushFrame();
         for (var node : unit.nodes()) {
-            if (node instanceof DeclarationWrapper(Declaration w)) {
-                collectDeclaration(w);
+            if (node instanceof DeclarationWrapper(Declaration d)) {
+                registerGlobal(d);
             }
         }
+        var result = rewriteUnit(unit);
+        popFrame();
+        return result;
     }
 
-    private void collectDeclaration(Declaration node) {
-        switch (node) {
-            case VariableDeclaration d -> allocate(d.name());
-            case FunctionDeclaration d -> {
-                allocate(d.name());
-                d.parameters().forEach(p -> allocate(p.name()));
-                collectBlock(d.body());
-            }
+    private void registerGlobal(Declaration d) {
+        switch (d) {
+            case VariableDeclaration v -> allocate(v.name());
+            case FunctionDeclaration f -> allocate(f.name());
             case StructDeclaration ignored -> {
             }
         }
     }
 
-    private void collectBlock(Block block) {
-        block.statements().forEach(this::collectStatement);
+    @Override
+    protected FunctionDeclaration rewriteFunctionDeclaration(FunctionDeclaration d) {
+        pushFrame();
+        var params = d.parameters().stream().map(this::rewriteFunctionParameter).toList();
+        var body = rewriteBlock(d.body());
+        popFrame();
+        return new FunctionDeclaration(d.returnType(), mapped(d.name()), params, body);
     }
 
-    private void collectStatement(Statement node) {
-        switch (node) {
-            case LocalVariableDeclarationStatement s -> allocate(s.name());
-            case IfStatement s -> {
-                collectBlock(s.thenBlock());
-                if (s.elseBlock() != null) collectStatement(s.elseBlock());
-            }
-            case ForStatement s -> {
-                if (s.init() != null) collectStatement(s.init());
-                collectBlock(s.body());
-            }
-            case WhileStatement s -> collectBlock(s.body());
-            case IntegerSwitchStatement s -> {
-                s.cases().forEach(c -> collectBlock(c.body()));
-                if (s.defaultCase() != null) collectBlock(s.defaultCase());
-            }
-            case Block s -> collectBlock(s);
-            default -> {
-            }
-        }
-    }
-
-    private boolean isReserved(String name) {
-        return GLSL_RESERVED.contains(name) || externalScope.contains(name);
-    }
-
-    private void allocate(String name) {
-        if (!isReserved(name) && !mapping.containsKey(name)) {
-            mapping.put(name, generateName(counter++));
-        }
-    }
-
-    private static String generateName(int index) {
-        var sb = new StringBuilder();
-        do {
-            sb.insert(0, (char) ('a' + index % 26));
-            index = index / 26 - 1;
-        } while (index >= 0);
-        return sb.toString();
+    @Override
+    protected Block rewriteBlock(Block block) {
+        pushFrame();
+        var result = super.rewriteBlock(block);
+        popFrame();
+        return result;
     }
 
     @Override
     protected VariableDeclaration rewriteVariableDeclaration(VariableDeclaration d) {
-        var initializer = d.initializer() == null ? null : rewriteExpr(d.initializer());
-        return new VariableDeclaration(d.qualifier(), d.glslType(), mapped(d.name()), initializer);
-    }
-
-    @Override
-    protected FunctionDeclaration rewriteFunctionDeclaration(FunctionDeclaration d) {
-        var params = d.parameters().stream().map(this::rewriteFunctionParameter).toList();
-        return new FunctionDeclaration(d.returnType(), mapped(d.name()), params, rewriteBlock(d.body()));
+        var init = d.initializer() == null ? null : rewriteExpr(d.initializer());
+        return new VariableDeclaration(d.qualifier(), d.glslType(), mapped(d.name()), init);
     }
 
     @Override
     protected FunctionParameter rewriteFunctionParameter(FunctionParameter p) {
-        return new FunctionParameter(p.glslType(), mapped(p.name()));
+        return new FunctionParameter(p.glslType(), allocate(p.name()));
     }
 
     @Override
@@ -140,7 +99,7 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
                     boolean isConst, GlslType glslType, String name, Expression initializer
             ) -> {
                 var init = initializer == null ? null : rewriteExpr(initializer);
-                yield new LocalVariableDeclarationStatement(isConst, glslType, mapped(name), init);
+                yield new LocalVariableDeclarationStatement(isConst, glslType, allocate(name), init);
             }
             case VoidFunctionCallStatement s -> {
                 var args = s.arguments().stream().map(this::rewriteExpr).toList();
@@ -155,7 +114,38 @@ public final class IdentifierObfuscationPass extends AstRewriter implements Obfu
         return new VariableExpression(mapped(e.name()), e.glslType());
     }
 
+    private void pushFrame() {
+        scopeStack.push(Maps.newHashMap());
+    }
+
+    private void popFrame() {
+        scopeStack.pop();
+    }
+
+    private String allocate(String name) {
+        if (isReserved(name)) return name;
+        String generated = generateName(counter++);
+        scopeStack.peek().put(name, generated);
+        return generated;
+    }
+
     private String mapped(String name) {
-        return mapping.getOrDefault(name, name);
+        for (var frame : scopeStack) {
+            if (frame.containsKey(name)) return frame.get(name);
+        }
+        return name;
+    }
+
+    private boolean isReserved(String name) {
+        return GLSL_RESERVED.contains(name) || externalScope.contains(name);
+    }
+
+    private static String generateName(int index) {
+        var sb = new StringBuilder();
+        do {
+            sb.insert(0, (char) ('a' + index % 26));
+            index = index / 26 - 1;
+        } while (index >= 0);
+        return sb.toString();
     }
 }
